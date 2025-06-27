@@ -46,11 +46,17 @@ def FB_blur_fusion_foreground_estimator(image, F, B, alpha, r=90):
 
 matting_model_dir_name = "matting_models"
 matting_model_list = {
-    "vitmatte_small (103 MB)": {
+    "vitmatte_small_composition_1k": {
         "model_url": "hustvl/vitmatte-small-composition-1k"
     },
-    "vitmatte_base (387 MB)": {
+    "vitmatte_base_composition_1k": {
         "model_url": "hustvl/vitmatte-base-composition-1k"
+    },
+    "vitmatte_small_distinctions_646": {
+        "model_url": "hustvl/vitmatte-small-distinctions-646"
+    },
+    "vitmatte_base_distinctions_646": {
+        "model_url": "hustvl/vitmatte-base-distinctions-646"
     },
 }
 def list_matting_models():
