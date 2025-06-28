@@ -14,7 +14,7 @@ from comfy.utils import ProgressBar
 from transformers import VitMatteForImageMatting, VitMatteImageProcessor
 
 logger = logging.getLogger('comfyui_image_matting')
-matting_model_dir_name = "matting_models"
+matting_model_dir_name = "matting"
 matting_model_list = {
     "vitmatte_small_composition_1k": {
         "model_url": "hustvl/vitmatte-small-composition-1k"
