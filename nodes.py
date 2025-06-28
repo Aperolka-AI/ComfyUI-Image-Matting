@@ -224,5 +224,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "MattingModelLoader": "Load Matting Model",
     "ApplyMatting": "Apply Matting",
     "CreateTrimap": "Create Trimap",
-    "IsMaskEmpty": "Mask Is Empty",
+    "IsMaskEmpty": "Is Mask Empty",
 }
