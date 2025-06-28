@@ -1,21 +1,17 @@
 import os
 import sys
+import cv2
 import math
 import copy
 import torch
+import logging
 import numpy as np
-import cv2
-from tqdm import trange
 import folder_paths
-
+from PIL import Image
+from tqdm import trange
 import comfy.model_management
 from comfy.utils import ProgressBar
 from transformers import VitMatteForImageMatting, VitMatteImageProcessor
-
-import cv2
-import numpy as np
-import logging
-from PIL import Image
 
 logger = logging.getLogger('comfyui_image_matting')
 
@@ -101,9 +97,9 @@ class MattingModelLoader:
                 "model_name": (list_matting_models(), ),
             }
         }
+    RETURN_TYPES = ("MATTING_MODEL", "MATTING_PREPROCESSOR")
     CATEGORY = "image_matting"
     FUNCTION = "main"
-    RETURN_TYPES = ("MATTING_MODEL", "MATTING_PREPROCESSOR")
 
     def main(self, model_name):
         matting_model,matting_preprocessor = load_matting_model(model_name)
@@ -136,9 +132,9 @@ class CreateTrimap:
                 }),
             }
         }
+    RETURN_TYPES = ("MASK",)
     CATEGORY = "image_matting"
     FUNCTION = "main"
-    RETURN_TYPES = ("MASK",)
 
     def main(self, mask, kernel_size):
         res_masks = []
@@ -161,15 +157,27 @@ class ApplyMatting:
                 "matting_model": ('MATTING_MODEL', {}),
                 "matting_preprocessor": ('MATTING_PREPROCESSOR', {}),
                 "image": ('IMAGE', {}),
-                "trimap": ("MASK", {}),
+                "mask": ("MASK", {}),
             }
         }
+    RETURN_TYPES = ("IMAGE", "MASK")
     CATEGORY = "image_matting"
     FUNCTION = "main"
-    RETURN_TYPES = ("IMAGE", "MASK")
+
+    def matting_predict(matting_model, matting_preprocessor, image, tri):
+        def load_matting_image(image_pil, tri, image_preprocessor):
+            inputs = image_preprocessor(images=image_pil, trimaps=tri, return_tensors="pt")
+            return inputs
+
+        inputs = load_matting_image(image.convert("RGB"), tri, matting_preprocessor)
+        for key in inputs:
+            inputs[key] = inputs[key].to(comfy.model_management.get_torch_device())
+        with torch.no_grad():
+            alphas = matting_model(**inputs).alphas[0][0].cpu().numpy()
+        return alphas
 
     def main(self, matting_model,matting_preprocessor, image, trimap):
-        res_images = []
+        res_images = []f
         res_masks = []
         for item, tri in zip(image, trimap):
             item = Image.fromarray(
@@ -208,32 +216,33 @@ class ApplyMatting:
             return (empty_mask, empty_mask)
         return (torch.cat(res_images, dim=0), torch.cat(res_masks, dim=0))
 
-def matting_predict(
-    matting_model,
-    matting_preprocessor,
-    image,
-    tri
-):
-    def load_matting_image(image_pil, tri, image_preprocessor):
+class IsMaskEmpty:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "mask": ("MASK",),
+            },
+        }
+    RETURN_TYPES = ("BOOLEAN")
+    CATEGORY = "image_matting"
+    FUNCTION = "main"
 
-        inputs = image_preprocessor(images=image_pil, trimaps=tri, return_tensors="pt")
-        return inputs
-
-    inputs = load_matting_image(image.convert("RGB"), tri, matting_preprocessor)
-    for key in inputs:
-        inputs[key] = inputs[key].to(comfy.model_management.get_torch_device())
-    with torch.no_grad():
-        alphas = matting_model(**inputs).alphas[0][0].cpu().numpy()
-    return alphas
+    def main(self, mask):
+        if not mask:
+            return True
+        return (torch.all(mask == 0).int().item(), )
 
 NODE_CLASS_MAPPINGS = {
     "MattingModelLoader": MattingModelLoader,
     "ApplyMatting": ApplyMatting,
     "CreateTrimap": CreateTrimap,
+    "IsMaskEmpty": IsMaskEmpty,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "MattingModelLoader": "Load Matting Model",
     "ApplyMatting": "Apply Matting",
     "CreateTrimap": "Create Trimap",
+    "IsMaskEmpty": "Mask Is Empty",
 }
