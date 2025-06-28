@@ -29,7 +29,7 @@ This project is licensed under the MIT License.
 ## Example Workflow
 ![image matting](https://github.com/Aperolka-AI/ComfyUI-Image-Matting/blob/master/image_matting.png)
 
-[Download the sample workflow](https://github.com/Aperolka-AI/ComfyUI-Image-Matting/blob/master/image_matting.json)
+[Download the Example Workflow](https://github.com/Aperolka-AI/ComfyUI-Image-Matting/blob/master/image_matting.json)
 
 ## Nodes Provided by the Extension
 
@@ -47,6 +47,6 @@ Check if the mask is empty
 
 ## ✨ Credits
 
-**Original Author:** [hackkhai](https://github.com/hackkhai)
-
 **Original Repo:** [ComfyUI-Image-Matting](https://github.com/hackkhai/ComfyUI-Image-Matting)
+
+**Original Author:** [hackkhai](https://github.com/hackkhai)
