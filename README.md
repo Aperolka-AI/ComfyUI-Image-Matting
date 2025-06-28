@@ -31,7 +31,7 @@ This project is licensed under the MIT License.
 
 [Download the sample workflow](https://github.com/Aperolka-AI/ComfyUI-Image-Matting/blob/master/image_matting.json)
 
-## Nodes
+## Nodes Provided by the Extension
 
 ### MattingModelLoader
 Load one of the four supported matting models (download automatically if necessary)
