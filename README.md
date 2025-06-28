@@ -42,7 +42,7 @@ Create Trimap with the provided mask
 ### Apply Matting
 Extract the foreground object
 
-### Mask Is Empty
+### Is Mask Empty
 Check if the mask is empty
 
 ## ✨ Credits
