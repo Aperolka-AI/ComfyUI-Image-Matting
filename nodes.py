@@ -14,32 +14,6 @@ from comfy.utils import ProgressBar
 from transformers import VitMatteForImageMatting, VitMatteImageProcessor
 
 logger = logging.getLogger('comfyui_image_matting')
-
-def FB_blur_fusion_foreground_estimator_1(image, alpha, r=90):
-    alpha = alpha[:, :, None]
-    return FB_blur_fusion_foreground_estimator(image, F=image, B=image, alpha=alpha, r=r)[0]
-
-
-def FB_blur_fusion_foreground_estimator_2(image, alpha, r=90):
-    alpha = alpha[:, :, None]
-    F, blur_B = FB_blur_fusion_foreground_estimator(
-        image, image, image, alpha, r)
-    return FB_blur_fusion_foreground_estimator(image, F, blur_B, alpha, r=6)[0]
-
-
-def FB_blur_fusion_foreground_estimator(image, F, B, alpha, r=90):
-    blurred_alpha = cv2.blur(alpha, (r, r))[:, :, None]
-
-    blurred_FA = cv2.blur(F * alpha, (r, r))
-    blurred_F = blurred_FA / (blurred_alpha + 1e-5)
-
-    blurred_B1A = cv2.blur(B * (1 - alpha), (r, r))
-    blurred_B = blurred_B1A / ((1 - blurred_alpha) + 1e-5)
-    F = blurred_F + alpha * \
-        (image - alpha * blurred_F - (1 - alpha) * blurred_B)
-    F = np.clip(F, 0, 1)
-    return F, blurred_B
-
 matting_model_dir_name = "matting_models"
 matting_model_list = {
     "vitmatte_small_composition_1k": {
@@ -55,68 +29,45 @@ matting_model_list = {
         "model_url": "hustvl/vitmatte-base-distinctions-646"
     },
 }
-def list_matting_models():
-    return list(matting_model_list.keys())
-
-def load_matting_model(model_name):
-    model_url = matting_model_list[model_name]["model_url"]
-    matting_model_checkpoint_path = get_local_filepath_(
-        matting_model_list[model_name]["model_url"], matting_model_dir_name,f"{model_url}")
-    matting_model = VitMatteForImageMatting.from_pretrained(matting_model_checkpoint_path)
-    preprocessor = VitMatteImageProcessor.from_pretrained(matting_model_checkpoint_path)
-    matting_model_device = comfy.model_management.get_torch_device()
-    matting_model = matting_model.to(matting_model_device)
-    matting_model.eval()
-    return (matting_model, preprocessor)
-
-def get_local_filepath_(url, dirname, local_file_name=None):
-
-    destination = folder_paths.get_full_path(dirname, local_file_name)
-    if destination:
-        logger.warn(f'using extra model: {destination}')
-        return destination
-
-    folder = os.path.join(folder_paths.models_dir, dirname)
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-
-    destination = os.path.join(folder, local_file_name)
-    if not os.path.exists(destination):
-        
-        # download_url_to_file(url, destination)
-        logger.warn(f'downloading {url} to {destination}')
-        VitMatteForImageMatting.from_pretrained(url).save_pretrained(destination)
-        VitMatteImageProcessor.from_pretrained(url).save_pretrained(destination)
-    return destination
 
 class MattingModelLoader:
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "model_name": (list_matting_models(), ),
+                "model_name": (list(matting_model_list.keys()), ),
             }
         }
     RETURN_TYPES = ("MATTING_MODEL", "MATTING_PREPROCESSOR")
     CATEGORY = "image_matting"
     FUNCTION = "main"
 
-    def main(self, model_name):
-        matting_model,matting_preprocessor = load_matting_model(model_name)
-        return (matting_model, matting_preprocessor)
-def gen_trimap(alpha, kernel_size=25):
-        
-        k_size = kernel_size
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,
-                                            (k_size, k_size))
-        dilated = cv2.dilate(alpha, kernel)
-        eroded = cv2.erode(alpha, kernel)
-        trimap = np.zeros(alpha.shape)
-        trimap.fill(128)
-        trimap[eroded > 254.5] = 255
-        trimap[dilated < 0.5] = 0
+    def get_local_model_path(url, dirname, local_file_name=None):
+        destination = folder_paths.get_full_path(dirname, local_file_name)
+        if destination:
+            return destination
+    
+        folder = os.path.join(folder_paths.models_dir, dirname)
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        destination = os.path.join(folder, local_file_name)
 
-        return trimap
+        if not os.path.exists(destination):
+            logger.warn(f'downloading {url} to {destination}')
+            VitMatteForImageMatting.from_pretrained(url).save_pretrained(destination)
+            VitMatteImageProcessor.from_pretrained(url).save_pretrained(destination)
+
+        return destination
+
+    def main(self, model_name):
+        model_url = matting_model_list[model_name]["model_url"]
+        matting_model_checkpoint_path = get_local_model_path(matting_model_list[model_name]["model_url"], matting_model_dir_name,f"{model_url}")
+        matting_preprocessor = VitMatteImageProcessor.from_pretrained(matting_model_checkpoint_path)
+        matting_model = VitMatteForImageMatting.from_pretrained(matting_model_checkpoint_path)
+        matting_model_device = comfy.model_management.get_torch_device()
+        matting_model = matting_model.to(matting_model_device)
+        matting_model.eval()
+        return (matting_model, matting_preprocessor)
 
 class CreateTrimap:
     @classmethod
@@ -128,7 +79,7 @@ class CreateTrimap:
                     "default": 9,
                     "min": 0,
                     "max": 50,
-                    "step": 0.01
+                    "step": 0.1
                 }),
             }
         }
@@ -136,19 +87,26 @@ class CreateTrimap:
     CATEGORY = "image_matting"
     FUNCTION = "main"
 
+    def gen_trimap(alpha, kernel_size=25):
+        k_size = kernel_size
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_size, k_size))
+        dilated = cv2.dilate(alpha, kernel)
+        eroded = cv2.erode(alpha, kernel)
+        trimap = np.zeros(alpha.shape)
+        trimap.fill(128)
+        trimap[eroded > 254.5] = 255
+        trimap[dilated < 0.5] = 0
+        return trimap
+
     def main(self, mask, kernel_size):
         res_masks = []
         for mask_ in mask:
-            
             mask_ = mask_.cpu().numpy()*255
             mask_ = mask_.astype(np.uint8)
-            mask_ = gen_trimap(mask_, kernel_size=kernel_size)/255.
-            
+            mask_ = gen_trimap(mask_, kernel_size=kernel_size)/255
             res_masks.extend([torch.from_numpy(mask_).unsqueeze(0)])
         return (torch.cat(res_masks, dim=0),)
 
-
-    
 class ApplyMatting:
     @classmethod
     def INPUT_TYPES(cls):
@@ -157,12 +115,34 @@ class ApplyMatting:
                 "matting_model": ('MATTING_MODEL', {}),
                 "matting_preprocessor": ('MATTING_PREPROCESSOR', {}),
                 "image": ('IMAGE', {}),
-                "mask": ("MASK", {}),
+                "trimap": ("MASK", {}),
             }
         }
     RETURN_TYPES = ("IMAGE", "MASK")
     CATEGORY = "image_matting"
     FUNCTION = "main"
+
+    def FB_blur_fusion_foreground_estimator_1(image, alpha, r=90):
+        alpha = alpha[:, :, None]
+        return FB_blur_fusion_foreground_estimator(image, F=image, B=image, alpha=alpha, r=r)[0]
+
+    def FB_blur_fusion_foreground_estimator_2(image, alpha, r=90):
+        alpha = alpha[:, :, None]
+        F, blur_B = FB_blur_fusion_foreground_estimator(image, image, image, alpha, r)
+        return FB_blur_fusion_foreground_estimator(image, F, blur_B, alpha, r=6)[0]
+
+    def FB_blur_fusion_foreground_estimator(image, F, B, alpha, r=90):
+        blurred_alpha = cv2.blur(alpha, (r, r))[:, :, None]
+    
+        blurred_FA = cv2.blur(F * alpha, (r, r))
+        blurred_F = blurred_FA / (blurred_alpha + 1e-5)
+    
+        blurred_B1A = cv2.blur(B * (1 - alpha), (r, r))
+        blurred_B = blurred_B1A / ((1 - blurred_alpha) + 1e-5)
+        F = blurred_F + alpha * \
+            (image - alpha * blurred_F - (1 - alpha) * blurred_B)
+        F = np.clip(F, 0, 1)
+        return F, blurred_B
 
     def matting_predict(matting_model, matting_preprocessor, image, tri):
         def load_matting_image(image_pil, tri, image_preprocessor):
