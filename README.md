@@ -42,7 +42,11 @@ Create Trimap with the provided mask
 ### Apply Matting
 Extract the foreground object
 
+### Mask Is Empty
+Check if the mask is empty
+
 ## ✨ Credits
 
 **Original Author:** [hackkhai](https://github.com/hackkhai)
+
 **Original Repo:** [ComfyUI-Image-Matting](https://github.com/hackkhai/ComfyUI-Image-Matting)
