@@ -15,7 +15,7 @@ Install using **ComfyUI Manager**:
 
 1. Open ComfyUI.
 2. Go to the **Manager** tab.
-3. Search for `Image Matting` or install via URL
+3. Search for `Image Matting` (or input the [git URL](https://github.com/Aperolka-AI/ComfyUI-Image-Matting.git) manually)
 4. Click **Install** and restart ComfyUI.
 
 ## 🤝 Contributions
@@ -27,9 +27,9 @@ Contributions, bug reports, and suggestions are welcome! Open a pull request or 
 This project is licensed under the MIT License.
 
 ## Example Workflow
-![image matting](https://github.com/hackkhai/ComfyUI-Image-Matting/blob/master/image_matting.png)
+![image matting](https://github.com/Aperolka-AI/ComfyUI-Image-Matting/blob/master/image_matting.png)
 
-[Download the sample workflow](https://github.com/hackkhai/ComfyUI-Image-Matting/blob/master/image_matting.json)
+[Download the sample workflow](https://github.com/Aperolka-AI/ComfyUI-Image-Matting/blob/master/image_matting.json)
 
 ## Nodes
 
