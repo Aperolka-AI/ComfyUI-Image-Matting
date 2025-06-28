@@ -1,5 +1,5 @@
 [project]
-version = "1.1.0"
+version = "1.0.0"
 name = "comfyui-image-matting"
 license = { file = "LICENSE" }
 description = "A ComfyUI extension for image matting using pretrained AI models. This extension allows you to extract precise foreground objects from images by leveraging trimaps that guide the matting process."
