@@ -103,7 +103,7 @@ class CreateTrimap:
         for mask_ in mask:
             mask_ = mask_.cpu().numpy()*255
             mask_ = mask_.astype(np.uint8)
-            mask_ = gen_trimap(mask_, kernel_size=kernel_size)/255
+            mask_ = gen_trimap(mask_, kernel_size=kernel_size)/255.
             res_masks.extend([torch.from_numpy(mask_).unsqueeze(0)])
         return (torch.cat(res_masks, dim=0),)
 
@@ -157,7 +157,7 @@ class ApplyMatting:
         return alphas
 
     def main(self, matting_model,matting_preprocessor, image, trimap):
-        res_images = []f
+        res_images = []
         res_masks = []
         for item, tri in zip(image, trimap):
             item = Image.fromarray(
